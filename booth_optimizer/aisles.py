@@ -33,32 +33,24 @@ def generate_aisles(grid: Grid, booth_span: int = 5) -> Grid:
     """Populate the grid with aisle cells respecting width and length rules."""
     plan = grid.clone()
 
-    # Perimeter aisles ensure access and minimum lengths.
-    _apply_vertical_aisle(plan, 0)
-    _apply_vertical_aisle(plan, max(0, plan.width - AISLE_WIDTH_CELLS))
+    # Perimeter aisles run horizontally so booths only need a single side against an aisle.
     _apply_horizontal_aisle(plan, 0)
     _apply_horizontal_aisle(plan, max(0, plan.height - AISLE_WIDTH_CELLS))
 
-    vertical_lines = []
     horizontal_lines = []
 
-    spacing = booth_span + AISLE_WIDTH_CELLS
-    # Interior vertical aisles
-    x = spacing
-    while x + AISLE_WIDTH_CELLS < plan.width - AISLE_WIDTH_CELLS:
-        _apply_vertical_aisle(plan, x)
-        vertical_lines.append(x)
-        x += spacing
+    # Allow two booth depths between aisles so only one side of each booth borders an aisle.
+    spacing = (booth_span * 2) + AISLE_WIDTH_CELLS
 
-    # Interior horizontal aisles
     y = spacing
     while y + AISLE_WIDTH_CELLS < plan.height - AISLE_WIDTH_CELLS:
         _apply_horizontal_aisle(plan, y)
         horizontal_lines.append(y)
         y += spacing
 
-    # Add small stubs to satisfy 1x4 extensions where aisles meet.
-    _add_extensions(plan, vertical_lines, horizontal_lines)
+    # Add small stubs to satisfy 1x4 extensions where aisles meet (no-op without vertical aisles
+    # but keeps compatibility if vertical aisles are introduced later).
+    _add_extensions(plan, [], horizontal_lines)
 
     return plan
 
