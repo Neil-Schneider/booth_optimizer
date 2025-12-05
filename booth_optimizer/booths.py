@@ -44,7 +44,12 @@ def place_booths_greedily(grid: Grid) -> Grid:
     best_plan: Grid | None = None
     best_count = -1
 
-    offsets: List[Tuple[int, int]] = [(0, 0), (BOOTH_SIZE // 2, BOOTH_SIZE // 2)]
+    # Try every possible sub-cell offset to reduce dead space at the edges.
+    offsets: List[Tuple[int, int]] = [
+        (ox, oy)
+        for ox in range(BOOTH_SIZE)
+        for oy in range(BOOTH_SIZE)
+    ]
 
     for ox, oy in offsets:
         attempt = plan.clone()
