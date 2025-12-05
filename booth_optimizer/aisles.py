@@ -38,6 +38,7 @@ def generate_aisles(grid: Grid, booth_span: int = 5) -> Grid:
     _apply_horizontal_aisle(plan, max(0, plan.height - AISLE_WIDTH_CELLS))
 
     horizontal_lines = []
+    vertical_lines = []
 
     # Allow two booth depths between aisles so only one side of each booth borders an aisle.
     spacing = (booth_span * 2) + AISLE_WIDTH_CELLS
@@ -48,20 +49,38 @@ def generate_aisles(grid: Grid, booth_span: int = 5) -> Grid:
         horizontal_lines.append(y)
         y += spacing
 
+    x = spacing
+    while x + AISLE_WIDTH_CELLS < plan.width - AISLE_WIDTH_CELLS:
+        _apply_vertical_aisle(plan, x)
+        vertical_lines.append(x)
+        x += spacing
+
+    # Ensure at least one connector if spacing rules produced none.
+    if not vertical_lines:
+        connector_x = max(0, min(plan.width - AISLE_WIDTH_CELLS, plan.width // 2 - AISLE_WIDTH_CELLS // 2))
+        _apply_vertical_aisle(plan, connector_x)
+        vertical_lines.append(connector_x)
+
     # Add small stubs to satisfy 1x4 extensions where aisles meet (no-op without vertical aisles
     # but keeps compatibility if vertical aisles are introduced later).
-    _add_extensions(plan, [], horizontal_lines)
+    _add_extensions(plan, vertical_lines, horizontal_lines)
 
     return plan
 
 
 def is_valid_aisle(grid: Grid) -> bool:
     """Ensure all aisle stripes meet minimum size constraints."""
+    total_aisle = 0
+    start: tuple[int, int] | None = None
 
     for y in range(grid.height):
         for x in range(grid.width):
             if grid.cells[y][x] != Cell.AISLE:
                 continue
+
+            total_aisle += 1
+            if start is None:
+                start = (x, y)
 
             horizontal = 1
             cx = x - 1
@@ -86,4 +105,21 @@ def is_valid_aisle(grid: Grid) -> bool:
             if max(horizontal, vertical) < MIN_SEGMENT_CELLS:
                 return False
 
-    return True
+    if total_aisle == 0 or start is None:
+        return True
+
+    # Verify that the aisle network is a single connected component.
+    stack = [start]
+    visited: set[tuple[int, int]] = set()
+
+    while stack:
+        cx, cy = stack.pop()
+        if (cx, cy) in visited:
+            continue
+        visited.add((cx, cy))
+
+        for nx, ny in ((cx - 1, cy), (cx + 1, cy), (cx, cy - 1), (cx, cy + 1)):
+            if grid.in_bounds(nx, ny) and grid.cells[ny][nx] == Cell.AISLE and (nx, ny) not in visited:
+                stack.append((nx, ny))
+
+    return len(visited) == total_aisle
