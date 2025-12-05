@@ -49,17 +49,12 @@ def generate_aisles(grid: Grid, booth_span: int = 5) -> Grid:
         horizontal_lines.append(y)
         y += spacing
 
-    x = spacing
-    while x + AISLE_WIDTH_CELLS < plan.width - AISLE_WIDTH_CELLS:
-        _apply_vertical_aisle(plan, x)
-        vertical_lines.append(x)
-        x += spacing
-
-    # Ensure at least one connector if spacing rules produced none.
-    if not vertical_lines:
-        connector_x = max(0, min(plan.width - AISLE_WIDTH_CELLS, plan.width // 2 - AISLE_WIDTH_CELLS // 2))
-        _apply_vertical_aisle(plan, connector_x)
-        vertical_lines.append(connector_x)
+    # Use a single vertical connector to keep all aisles connected without consuming
+    # excessive floor space. Placing it near the center balances booth space on both
+    # sides and avoids aisles that do not border any booths.
+    connector_x = max(0, min(plan.width - AISLE_WIDTH_CELLS, plan.width // 2 - AISLE_WIDTH_CELLS // 2))
+    _apply_vertical_aisle(plan, connector_x)
+    vertical_lines.append(connector_x)
 
     # Add small stubs to satisfy 1x4 extensions where aisles meet (no-op without vertical aisles
     # but keeps compatibility if vertical aisles are introduced later).
